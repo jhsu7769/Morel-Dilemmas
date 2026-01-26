@@ -17,7 +17,7 @@ public class EzyMeshSlicer : MonoBehaviour
     private GameObject sliceParticleInstance;
     private bool allowCut;
 
-    public void SetPoint1()
+    public void OnMouseDown()
     {
         if(sliceTimer > 0) return;
         sliceLineRenderer.enabled = true;
@@ -25,7 +25,7 @@ public class EzyMeshSlicer : MonoBehaviour
         sliceLineRenderer.SetPosition(0, p1World);
     }
 
-    public void SetPoint2()
+    public void OnMouseUp()
     {
         if(sliceTimer > 0) return;
 
@@ -34,30 +34,38 @@ public class EzyMeshSlicer : MonoBehaviour
         sliceTimer = 1;
     }
 
-    void FixedUpdate()
+    void Update()
     {
-        if(sliceTimer > 0)
+        if (sliceTimer > 0f)
         {
             allowCut = true;
-            sliceTimer -= Time.fixedDeltaTime/sliceTime;
+
+            sliceTimer -= Time.deltaTime / sliceTime;
+            sliceTimer = Mathf.Max(sliceTimer, 0f); // IMPORTANT
 
             effectLineRenderer.enabled = true;
-            effectLineRenderer.SetPosition(0, p1World);
+            effectLineRenderer.widthMultiplier = 1f;
+
             int num = 10;
-            if(effectLineRenderer.positionCount < num)
-            {
+            if (effectLineRenderer.positionCount != num)
                 effectLineRenderer.positionCount = num;
-            }
-            for(int i = 1; i < num; i++)
+
+            effectLineRenderer.SetPosition(0, p1World);
+
+            for (int i = 1; i < num; i++)
             {
                 float percent = i / (num - 1f);
-                effectLineRenderer.SetPosition(i, Vector3.Lerp(p1World, p2World, percent*sliceCurve.Evaluate(1-sliceTimer)));
+                float curveT = sliceCurve.Evaluate(1f - sliceTimer);
+                effectLineRenderer.SetPosition(
+                    i,
+                    Vector3.Lerp(p1World, p2World, percent * curveT)
+                );
             }
         }
         else
         {
             sliceLineRenderer.SetPosition(1, Camera.main.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, 5)));
-            if(allowCut)
+            if (allowCut)
             {
                 allowCut = false;
                 SliceAllChildren();
@@ -67,6 +75,7 @@ public class EzyMeshSlicer : MonoBehaviour
             }
         }
     }
+
 
     IEnumerator ShrinkSliceEffect(float duration)
     {
